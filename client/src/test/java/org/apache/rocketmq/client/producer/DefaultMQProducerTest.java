@@ -85,16 +85,18 @@ public class DefaultMQProducerTest {
     private String topic = "FooBar";
     private String producerGroupPrefix = "FooBar_PID";
 
+    //初始化测试
     @Before
     public void init() throws Exception {
         String producerGroupTemp = producerGroupPrefix + System.currentTimeMillis();
+        //设置生产组名、topic和一些nameServer相关的信息。
         producer = new DefaultMQProducer(producerGroupTemp);
         producer.setNamesrvAddr("127.0.0.1:9876");
         producer.setCompressMsgBodyOverHowmuch(16);
         message = new Message(topic, new byte[] {'a'});
         zeroMsg = new Message(topic, new byte[] {});
         bigMessage = new Message(topic, "This is a very huge message!".getBytes());
-
+        //启动 producer ，进入start方法！
         producer.start();
 
         Field field = DefaultMQProducerImpl.class.getDeclaredField("mQClientFactory");
@@ -114,6 +116,7 @@ public class DefaultMQProducerTest {
             .thenReturn(createSendResult(SendStatus.SEND_OK));
     }
 
+    //结束
     @After
     public void terminate() {
         producer.shutdown();
@@ -151,6 +154,7 @@ public class DefaultMQProducerTest {
         }
     }
 
+    //同步发送
     @Test
     public void testSendMessageSync_Success() throws RemotingException, InterruptedException, MQBrokerException, MQClientException {
         when(mQClientAPIImpl.getTopicRouteInfoFromNameServer(anyString(), anyLong())).thenReturn(createTopicRoute());
@@ -161,6 +165,7 @@ public class DefaultMQProducerTest {
         assertThat(sendResult.getQueueOffset()).isEqualTo(456L);
     }
 
+    //同步消息，且压缩消息
     @Test
     public void testSendMessageSync_WithBodyCompressed() throws RemotingException, InterruptedException, MQBrokerException, MQClientException {
         when(mQClientAPIImpl.getTopicRouteInfoFromNameServer(anyString(), anyLong())).thenReturn(createTopicRoute());
@@ -171,6 +176,7 @@ public class DefaultMQProducerTest {
         assertThat(sendResult.getQueueOffset()).isEqualTo(456L);
     }
 
+    //异步消息
     @Test
     public void testSendMessageAsync_Success() throws RemotingException, InterruptedException, MQBrokerException, MQClientException {
         final CountDownLatch countDownLatch = new CountDownLatch(1);
@@ -416,6 +422,7 @@ public class DefaultMQProducerTest {
         assertThat(cc.get()).isEqualTo(1);
     }
 
+    //topic路由
     public static TopicRouteData createTopicRoute() {
         TopicRouteData topicRouteData = new TopicRouteData();
 

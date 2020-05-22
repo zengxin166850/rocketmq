@@ -230,18 +230,24 @@ public class MQClientInstance {
                 case CREATE_JUST:
                     this.serviceState = ServiceState.START_FAILED;
                     // If not specified,looking address from name server
+                    //判断是否制定了nameserver，没有自己查找
                     if (null == this.clientConfig.getNamesrvAddr()) {
                         this.mQClientAPIImpl.fetchNameServerAddr();
                     }
                     // Start request-response channel
+                    //打开请求和响应的channel，底层是netty
                     this.mQClientAPIImpl.start();
                     // Start various schedule tasks
+                    //开启定时，，包括与 Broker 之间的定时心跳，定时与 NameServer 同步数据等任务
                     this.startScheduledTask();
                     // Start pull service
+                    //开启拉消息服务
                     this.pullMessageService.start();
                     // Start rebalance service
+                    //负载均衡服务
                     this.rebalanceService.start();
                     // Start push service
+                    //打开推服务。
                     this.defaultMQProducer.getDefaultMQProducerImpl().start(false);
                     log.info("the client factory [{}] start OK", this.clientId);
                     this.serviceState = ServiceState.RUNNING;
@@ -255,6 +261,7 @@ public class MQClientInstance {
     }
 
     private void startScheduledTask() {
+        //同步nameServer地址
         if (null == this.clientConfig.getNamesrvAddr()) {
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
@@ -268,7 +275,7 @@ public class MQClientInstance {
                 }
             }, 1000 * 10, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
         }
-
+        //更新topic的路由信息
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -280,7 +287,7 @@ public class MQClientInstance {
                 }
             }
         }, 10, this.clientConfig.getPollNameServerInterval(), TimeUnit.MILLISECONDS);
-
+        //发送心跳
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override

@@ -176,34 +176,41 @@ public class DefaultMQProducerImpl implements MQProducerInner {
     }
 
     public void start(final boolean startFactory) throws MQClientException {
+
+        //producer的启动，实际是由这里的实现类完成的。
         switch (this.serviceState) {
             case CREATE_JUST:
-                this.serviceState = ServiceState.START_FAILED;
-
+                //初始状态为create_just，一定会进这里的分支。
+                this.serviceState = ServiceState.START_FAILED;//先修改为错误状态
+                //检查配置，跳过
                 this.checkConfig();
 
                 if (!this.defaultMQProducer.getProducerGroup().equals(MixAll.CLIENT_INNER_PRODUCER_GROUP)) {
                     this.defaultMQProducer.changeInstanceNameToPID();
                 }
-
+                //从MQclientManager获取连接instance，刚开始肯定没有，执行新建，参数为默认初始化的producer和 rpcHook接口（执行请求前和响应后的部分操作。如权限验证？）
                 this.mQClientFactory = MQClientManager.getInstance().getOrCreateMQClientInstance(this.defaultMQProducer, rpcHook);
-
+                //注册到mqClient中，其实是一个ConcurrentHashMap维护的内存表，以客户端id为key，value为对应的client连接instance
                 boolean registerOK = mQClientFactory.registerProducer(this.defaultMQProducer.getProducerGroup(), this);
+
+                //如果创建失败，恢复状态为CREATE_JUST，然后抛出异常。
                 if (!registerOK) {
                     this.serviceState = ServiceState.CREATE_JUST;
+                    //producer group名已经存在，需另外指定
                     throw new MQClientException("The producer group[" + this.defaultMQProducer.getProducerGroup()
                         + "] has been created before, specify another name please." + FAQUrl.suggestTodo(FAQUrl.GROUP_NAME_DUPLICATE_URL),
                         null);
                 }
-
+                //存放k-v， topic名-topic信息到对应的concurrentHashMap中
                 this.topicPublishInfoTable.put(this.defaultMQProducer.getCreateTopicKey(), new TopicPublishInfo());
-
+                //正式启动
                 if (startFactory) {
                     mQClientFactory.start();
                 }
 
                 log.info("the producer [{}] start OK. sendMessageWithVIPChannel={}", this.defaultMQProducer.getProducerGroup(),
                     this.defaultMQProducer.isSendMessageWithVIPChannel());
+                //修改状态为running。
                 this.serviceState = ServiceState.RUNNING;
                 break;
             case RUNNING:
